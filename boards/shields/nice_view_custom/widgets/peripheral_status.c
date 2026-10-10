@@ -169,6 +169,21 @@ ZMK_DISPLAY_WIDGET_LISTENER(widget_peripheral_status, struct peripheral_status_s
                             output_status_update_cb, get_state)
 ZMK_SUBSCRIPTION(widget_peripheral_status, zmk_split_peripheral_status_changed);
 
+static void set_art_image(lv_timer_t *timer) {
+    lv_obj_t *art = timer->user_data;
+    static size_t current_index = 0;
+
+    current_index = (current_index + 1) % (sizeof(anim_imgs) / sizeof(anim_imgs[0]));
+    lv_img_set_src(art, anim_imgs[current_index]);
+}
+
+static void art_del_cb(lv_event_t *e) {
+    lv_timer_t *timer = lv_event_get_user_data(e);
+    if (timer) {
+        lv_timer_del(timer);
+    }
+}
+
 int zmk_widget_status_init(struct zmk_widget_status *widget, lv_obj_t *parent) {
     widget->obj = lv_obj_create(parent);
     lv_obj_set_size(widget->obj, 160, 68);
@@ -176,14 +191,17 @@ int zmk_widget_status_init(struct zmk_widget_status *widget, lv_obj_t *parent) {
     lv_obj_align(top, LV_ALIGN_TOP_RIGHT, 0, 0);
     lv_canvas_set_buffer(top, widget->cbuf, CANVAS_SIZE, CANVAS_SIZE, LV_IMG_CF_TRUE_COLOR);
 
-    lv_obj_t * art = lv_animimg_create(widget->obj);
-    lv_obj_center(art);
-    lv_animimg_set_src(art, (const void **) anim_imgs, 30);
-    lv_animimg_set_duration(art, CONFIG_CUSTOM_ANIMATION_SPEED);
-    lv_animimg_set_repeat_count(art, LV_ANIM_REPEAT_INFINITE);
-    lv_animimg_start(art);
-    
+    lv_obj_t *art = lv_img_create(widget->obj);
+    lv_img_set_src(art, anim_imgs[0]);
     lv_obj_align(art, LV_ALIGN_TOP_LEFT, 0, 0);
+
+    uint32_t period = CONFIG_CUSTOM_ANIMATION_SPEED / (sizeof(anim_imgs) / sizeof(anim_imgs[0]));
+    if (period == 0) {
+        period = 1000;
+    }
+    lv_timer_t *timer = lv_timer_create(set_art_image, period, art);
+    lv_obj_add_event_cb(art, art_del_cb, LV_EVENT_DELETE, timer);
+
     sys_slist_append(&widgets, &widget->node);
     widget_battery_status_init();
     widget_peripheral_status_init();
