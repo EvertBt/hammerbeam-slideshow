@@ -169,9 +169,10 @@ ZMK_DISPLAY_WIDGET_LISTENER(widget_peripheral_status, struct peripheral_status_s
                             output_status_update_cb, get_state)
 ZMK_SUBSCRIPTION(widget_peripheral_status, zmk_split_peripheral_status_changed);
 
+static size_t current_index = 0;
+
 static void set_art_image(lv_timer_t *timer) {
     lv_obj_t *art = timer->user_data;
-    static size_t current_index = 0;
 
     current_index = (current_index + 1) % (sizeof(anim_imgs) / sizeof(anim_imgs[0]));
     lv_img_set_src(art, anim_imgs[current_index]);
@@ -191,8 +192,9 @@ int zmk_widget_status_init(struct zmk_widget_status *widget, lv_obj_t *parent) {
     lv_obj_align(top, LV_ALIGN_TOP_RIGHT, 0, 0);
     lv_canvas_set_buffer(top, widget->cbuf, CANVAS_SIZE, CANVAS_SIZE, LV_IMG_CF_TRUE_COLOR);
 
+    current_index = sys_rand32_get() % (sizeof(anim_imgs) / sizeof(anim_imgs[0]));
     lv_obj_t *art = lv_img_create(widget->obj);
-    lv_img_set_src(art, anim_imgs[0]);
+    lv_img_set_src(art, anim_imgs[current_index]);
     lv_obj_align(art, LV_ALIGN_TOP_LEFT, 0, 0);
 
     uint32_t period = CONFIG_CUSTOM_ANIMATION_SPEED / (sizeof(anim_imgs) / sizeof(anim_imgs[0]));
